@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require "itax_code/version"
-require "itax_code/utils"
-require "itax_code/encoder"
-require "itax_code/parser"
-require "itax_code/error"
+require "./lib/itax_code/version"
+require "./lib/itax_code/utils"
+require "./lib/itax_code/encoder"
+require "./lib/itax_code/parser"
+require "./lib/itax_code/error"
 
 module ItaxCode
   class << self

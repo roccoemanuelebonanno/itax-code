@@ -15,16 +15,13 @@ module ItaxCode
   # @return [String] The encoded tax code
   class Encoder
     # @param [Hash]  data  The user attributes
-    # @param [Utils] utils
     #
     # @option data [String]       :surname    The user first name
     # @option data [String]       :name       The user last name
     # @option data [String]       :gender     The user gender
     # @option data [String, Date] :birthdate  The user birthdate
     # @option data [String]       :birthplace The user birthplace
-    def initialize(data = {}, utils = Utils.new)
-      @utils = utils
-
+    def initialize(data = {})
       @surname    = data[:surname]
       @name       = data[:name]
       @gender     = data[:gender]&.upcase
@@ -43,25 +40,25 @@ module ItaxCode
       code += encode_name
       code += encode_birthdate
       code += encode_birthplace
-      code += utils.encode_cin code
+      code += ItaxCode::Utils.encode_cin code
       code
     end
 
     private
 
-      attr_accessor :surname, :name, :gender, :birthdate, :birthplace, :utils
+      attr_accessor :surname, :name, :gender, :birthdate, :birthplace
 
       def encode_surname
-        chars      = utils.slugged(surname).chars
-        consonants = utils.extract_consonants chars
-        vowels     = utils.extract_vowels chars
+        chars      = ItaxCode::Utils.slugged(surname).chars
+        consonants = ItaxCode::Utils.extract_consonants chars
+        vowels     = ItaxCode::Utils.extract_vowels chars
         "#{consonants[0..2]}#{vowels[0..2]}XXX"[0..2].upcase
       end
 
       def encode_name
-        chars      = utils.slugged(name).chars
-        consonants = utils.extract_consonants chars
-        vowels     = utils.extract_vowels chars
+        chars      = ItaxCode::Utils.slugged(name).chars
+        consonants = ItaxCode::Utils.extract_consonants chars
+        vowels     = ItaxCode::Utils.extract_vowels chars
 
         consonants = consonants.chars.values_at(0, 2..consonants.size).join if consonants.length > 3
 
@@ -70,26 +67,26 @@ module ItaxCode
 
       def encode_birthdate
         year  = birthdate.year.to_s[2..-1]
-        month = utils.months[birthdate.month - 1]
+        month = ItaxCode::Utils.months[birthdate.month - 1]
         day   = format "%02d", (birthdate.day + (gender == "F" ? 40 : 0))
         "#{year}#{month}#{day}"
       end
 
-      def encode_birthplace(src = utils.cities, stop: false)
+      def encode_birthplace(src = ItaxCode::Utils.cities, stop: false)
         lookup_key = birthplace.match?(/^\w{1}\d{3}$/) ? "code" : "name"
-        place_slug = utils.slugged(birthplace)
-        place_item = src.find { |i| place_slug == utils.slugged(i[lookup_key]) }
+        place_slug = ItaxCode::Utils.slugged(birthplace)
+        place_item = src.find { |i| place_slug == ItaxCode::Utils.slugged(i[lookup_key]) }
 
         code = place_item&.[]("code")
-        return code if utils.present?(code)
+        return code if ItaxCode::Utils.present?(code)
         raise MissingDataError, "no code found for #{birthplace}" if stop
 
-        encode_birthplace(utils.countries, stop: true)
+        encode_birthplace(ItaxCode::Utils.countries, stop: true)
       end
 
       def validate_data_presence!
         instance_variables.each do |ivar|
-          next if utils.present?(instance_variable_get(ivar))
+          next if ItaxCode::Utils.present?(instance_variable_get(ivar))
 
           raise MissingDataError, "missing #{ivar} value"
         end

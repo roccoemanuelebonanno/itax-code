@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "itax_code/omocode"
+require "./lib/itax_code/omocode"
 
 module ItaxCode
   # Handles the parsing logic.
@@ -14,14 +14,12 @@ module ItaxCode
     LENGTH = 16
 
     # @param [String] tax_code
-    # @param [Utils]  utils
-    def initialize(tax_code, utils = Utils.new)
+    def initialize(tax_code)
       @tax_code = tax_code&.upcase
-      @utils    = utils
 
-      raise NoTaxCodeError if @utils.blank?(@tax_code)
+      raise NoTaxCodeError if ItaxCode::Utils.blank?(@tax_code)
       raise InvalidTaxCodeError if @tax_code.length != LENGTH
-      raise InvalidControlInternalNumberError if raw[:cin] != @utils.encode_cin(@tax_code)
+      raise InvalidControlInternalNumberError if raw[:cin] != ItaxCode::Utils.encode_cin(@tax_code)
     end
 
     # Decodes the tax code into its components.
@@ -40,7 +38,7 @@ module ItaxCode
 
     private
 
-      attr_accessor :tax_code, :utils
+      attr_accessor :tax_code
 
       def raw
         @raw ||= {
@@ -56,11 +54,11 @@ module ItaxCode
       end
 
       def raw_matches
-        @raw_matches ||= tax_code.scan(utils.tax_code_sections_regex).flatten
+        @raw_matches ||= tax_code.scan(ItaxCode::Utils.tax_code_sections_regex).flatten
       end
 
       def gender
-        val = utils.omocodia_decode(raw[:birthdate_day]).to_i
+        val = ItaxCode::Utils.omocodia_decode(raw[:birthdate_day]).to_i
         val > 40 ? "F" : "M"
       end
 
@@ -69,16 +67,16 @@ module ItaxCode
       # that both 1920 and 2020 could be valid born years.
       def year
         current_year = Date.today.year
-        val = (current_year.to_s[0..1] + utils.omocodia_decode(raw[:birthdate_year])).to_i
+        val = (current_year.to_s[0..1] + ItaxCode::Utils.omocodia_decode(raw[:birthdate_year])).to_i
         val > current_year ? val - 100 : val
       end
 
       def month
-        utils.months.find_index(raw[:birthdate_month]) + 1
+        ItaxCode::Utils.months.find_index(raw[:birthdate_month]) + 1
       end
 
       def day
-        val = utils.omocodia_decode(raw[:birthdate_day]).to_i
+        val = ItaxCode::Utils.omocodia_decode(raw[:birthdate_day]).to_i
         val > 40 ? val - 40 : val
       end
 
@@ -86,18 +84,18 @@ module ItaxCode
         @birthdate ||= Date.parse("#{year}-#{month}-#{day}").to_s
       end
 
-      def birthplace(src = utils.cities, stop: false)
+      def birthplace(src = ItaxCode::Utils.cities, stop: false)
         place = src.find { |item| item["code"] == birthplace_code && in_dates?(item) }
 
         if place.nil?
-          birthplace(utils.countries, stop: true) unless stop
+          birthplace(ItaxCode::Utils.countries, stop: true) unless stop
         else
           place.to_h.transform_keys(&:to_sym)
         end
       end
 
       def birthplace_code
-        raw[:birthplace][0] + utils.omocodia_decode(raw[:birthplace][1..-1])
+        raw[:birthplace][0] + ItaxCode::Utils.omocodia_decode(raw[:birthplace][1..-1])
       end
 
       def in_dates?(item)

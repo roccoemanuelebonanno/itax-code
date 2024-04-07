@@ -2,15 +2,13 @@
 
 module ItaxCode
   class Omocode
-    attr_reader :tax_code, :utils
+    attr_reader :tax_code
 
     # Creates a new instance for a given tax_code.
     #
     # @param [String] tax_code
-    # @param [Utils]  utils
-    def initialize(tax_code, utils = Utils.new)
+    def initialize(tax_code)
       @tax_code = tax_code
-      @utils    = utils
     end
 
     # Computes the omocodes from a given tax_code by first identifying the original
@@ -18,8 +16,8 @@ module ItaxCode
     #
     # @return [Array]
     def omocodes
-      [original_omocode] + utils.omocodia_indexes_combos.map do |combo|
-        omocode(original_omocode, combo, ->(char) { utils.omocodia_encode(char) })
+      [original_omocode] + ItaxCode::Utils.omocodia_indexes_combos.map do |combo|
+        omocode(original_omocode, combo, ->(char) { ItaxCode::Utils.omocodia_encode(char) })
       end
     end
 
@@ -29,7 +27,9 @@ module ItaxCode
     # @return [String]
     def original_omocode
       @original_omocode ||= omocode(
-        tax_code, utils.omocodia_indexes, ->(char) { utils.omocodia_decode(char) }
+        tax_code, ItaxCode::Utils.omocodia_indexes, lambda { |char|
+                                                      ItaxCode::Utils.omocodia_decode(char)
+                                                    }
       )
     end
 
@@ -43,7 +43,7 @@ module ItaxCode
         end
 
         omocode = chars.join
-        omocode + utils.encode_cin(omocode)
+        omocode + ItaxCode::Utils.encode_cin(omocode)
       end
   end
 end
